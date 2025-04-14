@@ -13,7 +13,6 @@ setup_logging()
 create_directory(QR_DIRECTORY)
 
 # This creates an instance of the FastAPI application.
-from fastapi import FastAPI
 
 app = FastAPI(
     title="QR Code Manager",
