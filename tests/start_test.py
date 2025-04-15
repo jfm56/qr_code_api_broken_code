@@ -24,7 +24,7 @@ async def test_create_qr_code_unauthorized():
         "size": 10,
     }
     async with AsyncClient(app=app, base_url="http://test") as ac:
-        response = await ac.post("/api/qr-codes/", json=qr_request)
+        response = await ac.post("/qr-codes/", json=qr_request)
     assert response.status_code == 401  # Unauthorized
 
 @pytest.mark.asyncio

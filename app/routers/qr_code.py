@@ -16,7 +16,7 @@ import logging
 router = APIRouter()
 
 # Setup OAuth2 with Password (and hashing), using a simple OAuth2PasswordBearer scheme
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 # Define an endpoint to create QR codes
 # It responds to POST requests at "/qr-codes/" and returns data matching the QRCodeResponse model
