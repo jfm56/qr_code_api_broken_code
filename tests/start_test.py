@@ -26,13 +26,9 @@ async def test_create_qr_code_unauthorized():
         "back_color": "white",
         "size": 10,
     }
-
-    # ✅ Use ASGITransport instead of app=app
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+    async with AsyncClient(app=app, base_url="http://test") as ac:
         response = await ac.post("/qr-codes/", json=qr_request)
-
-    assert response.status_code == 401
+    assert response.status_code == 401  # Unauthorized
 
 @pytest.mark.asyncio
 async def test_create_and_delete_qr_code():
@@ -40,9 +36,13 @@ async def test_create_and_delete_qr_code():
         "username": "admin",
         "password": "secret",
     }
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+
+    # ✅ Correctly use ASGITransport to test FastAPI app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         # Login and get the access token
         token_response = await ac.post("/token", data=form_data)
+        assert token_response.status_code == 200
         access_token = token_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {access_token}"}
 
@@ -54,11 +54,23 @@ async def test_create_and_delete_qr_code():
             "size": 10,
         }
         create_response = await ac.post("/qr-codes/", json=qr_request, headers=headers)
-        assert create_response.status_code in [200, 409]  # Created or already exists
+        assert create_response.status_code in [200, 201, 409]
 
-        # If the QR code was created, attempt to delete it
-        if create_response.status_code == 201:
-            qr_code_url = create_response.json()["qr_code_url"]
-            qr_filename = qr_code_url.split('/')[-1]
-            delete_response = await ac.delete(f"/qr-codes/{qr_filename}", headers=headers)
-            assert delete_response.status_code == 204  # No Content, successfully deleted
+        # If QR code was created or already exists, attempt to delete it
+        if create_response.status_code in [200, 201]:
+            response_json = create_response.json()
+            # Try direct access first
+            qr_code_url = response_json.get("qr_code_url")
+
+        # Fallback: extract from "links"
+        if not qr_code_url:
+            for link in response_json.get("links", []):
+                if link.get("rel") == "view":
+                    qr_code_url = link.get("href")
+                    break
+
+        assert qr_code_url, "QR code URL could not be extracted from response"
+        qr_filename = qr_code_url.split("/")[-1]
+
+        delete_response = await ac.delete(f"/qr-codes/{qr_filename}", headers=headers)
+        assert delete_response.status_code == 204
