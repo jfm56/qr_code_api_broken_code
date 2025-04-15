@@ -26,9 +26,13 @@ async def test_create_qr_code_unauthorized():
         "back_color": "white",
         "size": 10,
     }
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+
+    # ✅ Use ASGITransport instead of app=app
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         response = await ac.post("/qr-codes/", json=qr_request)
-    assert response.status_code == 401  # Unauthorized
+
+    assert response.status_code == 401
 
 @pytest.mark.asyncio
 async def test_create_and_delete_qr_code():
